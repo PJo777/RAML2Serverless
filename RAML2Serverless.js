@@ -1,15 +1,16 @@
 var raml = require('raml-1-parser');
 var YAML = require('json2yaml')
+var fs = require("fs");
+var path = require("path");
 
+//global variable -  parameters later.
 var _runtime = "nodejs6.10";
 var _codebase = "src";
 var _runtimeExt = "js";
 
-var fs = require("fs");
-var path = require("path");
 
 var args = process.argv.slice(2);
-var raml_file = args[0];;
+var raml_file = args[0];
 // Here we create a file name to be loaded
 var fName = path.resolve(__dirname, raml_file);
 // Parse our RAML file with all the dependencies
@@ -26,51 +27,23 @@ Object.keys(apiResources).forEach(function(key){
     processResource(apiResources[key])
 })
 
-//Create an object for CloudFormation Template for all the Functions
-var CFT = {};
-CFT.AWSTemplateFormatVersion = '2010-09-09';
-CFT.Transform = 'AWS::Serverless-2016-10-31';
-CFT.Resources = [];
+//create CFT Object from Function Definitions (based on runtime)
+var CFT = getCloudFormationTemplate(funcs, _runtime , _runtimeExt);
 
-//process all resources
-for (var i in funcs) {
-
-     var funcRes = funcs[i];
-     
-     var func = {};
-    //func.name = funcRes.name;
-     func.Type = "AWS::Serverless::Function";
-     func.Properties = {};
-     func.Properties.Handler = funcRes.name + "Function.handler";
-     func.Properties.Runtime = _runtime;
-     func.Properties.CodeUri = _codebase + "/" + funcRes.name + "Function."  + _runtimeExt;
-     func.Properties.Events = {};
-     Evt = {};
-     //Evt.name  = funcRes.name + "Resource";
-     Evt.Type = "Api";
-     Evt.Properties = {};
-     Evt.Properties.Path = funcRes.path;
-     Evt.Properties.Method = funcRes.method;
-
-     func.Properties.Events[funcRes.name + "Resource"] = Evt;
-     
-     var objF = {};
-     objF[funcRes.name + "Function"] = func;
-     CFT.Resources.push(objF);
-}
-
-// final output as CFT
-//console.log(JSON.stringify(CFT));
+// Convert the CFT object to YAML format.
 var  ymlText = YAML.stringify(CFT);
 
-// write to file 
 // CFT File Name 
-
 createCFTFile(ymlText);
-createTemplateFiles(funcs, _runtime);
-//console.log(ymlText);
 
-function createTemplateFiles(funcs, _runtime ) {
+// Create source code files based on template.
+createSourceTemplateFiles(funcs, _runtime);
+
+console.log("Processing Complete !");
+
+//all the functions.
+
+function createSourceTemplateFiles(funcs, _runtime ) {
 
     var dir = './output/src';
     if (!fs.existsSync(dir)){
@@ -93,12 +66,13 @@ function createCFTFile(ymlText) {
     if (!fs.existsSync(dir)){
         fs.mkdirSync(dir);
     }
-    var cft_file = raml_file.substring(0, raml_file.lastIndexOf('.')) + ".cft";
+    var raml_file_name = raml_file.substring(raml_file.lastIndexOf('/'));
+    var cft_file = raml_file_name.substring(0, raml_file_name.lastIndexOf('.')) + ".cft";
     fs.writeFile("./output/" + cft_file, YAMLtxt, function(err) {
         if(err) {
             return console.log(err);
         }
-        console.log("Processing Complete !");
+     
     });
 }
 
@@ -165,4 +139,41 @@ function getFuncName (completeUri, methodName) {
   }
 
   return name;
+}
+
+function getCloudFormationTemplate(functions, runtime, runtimeExt) {
+    //Create an object for CloudFormation Template for all the Functions
+var CFT = {};
+CFT.AWSTemplateFormatVersion = '2010-09-09';
+CFT.Transform = 'AWS::Serverless-2016-10-31';
+CFT.Resources = [];
+
+    //process all resources
+    for (var i in functions) {
+
+         var funcRes = functions[i];
+         
+         var func = {};
+        //func.name = funcRes.name;
+         func.Type = "AWS::Serverless::Function";
+         func.Properties = {};
+         func.Properties.Handler = funcRes.name + "Function.handler";
+         func.Properties.Runtime = runtime;
+         func.Properties.CodeUri = _codebase + "/" + funcRes.name + "Function."  + runtimeExt;
+         func.Properties.Events = {};
+         Evt = {};
+         //Evt.name  = funcRes.name + "Resource";
+         Evt.Type = "Api";
+         Evt.Properties = {};
+         Evt.Properties.Path = funcRes.path;
+         Evt.Properties.Method = funcRes.method;
+
+         func.Properties.Events[funcRes.name + "Resource"] = Evt;
+         
+         var objF = {};
+         objF[funcRes.name + "Function"] = func;
+         CFT.Resources.push(objF);
+    }
+
+    return CFT;
 }
