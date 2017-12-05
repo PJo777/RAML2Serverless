@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  PetsGetFunction:
+    Properties:
+      CodeUri: s3://cc.lambda-functions/299bba9c33a928188349f9383183ad32
+      Events:
+        PetsGetResource:
+          Properties:
+            Method: get
+            Path: /pets
+          Type: Api
+      Handler: PetsGetFunction.handler
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  PetsIdDeleteFunction:
+    Properties:
+      CodeUri: s3://cc.lambda-functions/5af82f12431ed4100d512f8a23ddc3b9
+      Events:
+        PetsIdDeleteResource:
+          Properties:
+            Method: delete
+            Path: /pets/{id}
+          Type: Api
+      Handler: PetsIdDeleteFunction.handler
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  PetsIdPutFunction:
+    Properties:
+      CodeUri: s3://cc.lambda-functions/60c36734fadf224ce0dbf1005c43eb3b
+      Events:
+        PetsIdPutResource:
+          Properties:
+            Method: put
+            Path: /pets/{id}
+          Type: Api
+      Handler: PetsIdPutFunction.handler
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+  PetsPostFunction:
+    Properties:
+      CodeUri: s3://cc.lambda-functions/669e1cfac03769b29931273fd5729844
+      Events:
+        PetsPostResource:
+          Properties:
+            Method: post
+            Path: /pets
+          Type: Api
+      Handler: PetsPostFunction.handler
+      Runtime: nodejs6.10
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31

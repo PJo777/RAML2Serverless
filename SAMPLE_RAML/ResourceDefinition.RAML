@@ -1,0 +1,40 @@
+#%RAML 1.0
+---
+title: User and Group Maintenance
+version: v1
+baseUri: /manageusers
+
+types:
+  User:
+    properties:
+      id: string
+      name: string
+    example:
+      id: "abc123"
+      name: "John Doe"
+  Group:
+    properties:
+      id: string
+      name: string
+      description : string
+    example:
+      id: "550e8400-e29b-41d4-a716"
+      name: "Group 1"
+/appuser:
+  /{userId}:
+    get:
+      description: Check if user exists on the system
+      responses:
+        200:
+          body:
+            application/json:
+              type: User
+/appusergroup:
+  /{userId}:
+    get:
+      description: Get a list of user's group membership
+      responses:
+        200:
+          body:
+            application/json:
+              type: Group[]    
