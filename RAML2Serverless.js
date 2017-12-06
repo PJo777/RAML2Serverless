@@ -1,3 +1,7 @@
+#!/usr/bin/env node
+
+'use strict';
+
 var raml = require('raml-1-parser');
 var YAML = require('json2yaml')
 var fs = require("fs");
@@ -8,38 +12,39 @@ var _runtime = "nodejs6.10";
 var _codebase = "src";
 var _runtimeExt = "js";
 
+function processRaml(raml_file) {
 
-var args = process.argv.slice(2);
-var raml_file = args[0];
-// Here we create a file name to be loaded
-var fName = path.resolve(__dirname, raml_file);
-// Parse our RAML file with all the dependencies
-var ast = raml.loadSync(fName);
+    // Here we create a file name to be loaded
+    var fName = path.resolve(raml_file);
+    // Parse our RAML file with all the dependencies
+    var ast = raml.loadSync(fName);
 
-var data = ast.specification;
-var apiResources = data.resources;
+    var data = ast.specification;
+    var apiResources = data.resources;
 
-var funcs = [];
+    var funcs = [];
 
-// Enumerate all the resources and get a list of Functions 
+    // Enumerate all the resources and get a list of Functions 
 
-Object.keys(apiResources).forEach(function(key){
-    processResource(apiResources[key])
-})
+    Object.keys(apiResources).forEach(function(key){
+       funcs = processResource(apiResources[key])
+    })
 
-//create CFT Object from Function Definitions (based on runtime)
-var CFT = getCloudFormationTemplate(funcs, _runtime , _runtimeExt);
+    //create CFT Object from Function Definitions (based on runtime)
+    var CFT = getCloudFormationTemplate(funcs, _runtime , _runtimeExt);
 
-// Convert the CFT object to YAML format.
-var  ymlText = YAML.stringify(CFT);
+    // Convert the CFT object to YAML format.
+    var  ymlText = YAML.stringify(CFT);
 
-// CFT File Name 
-createCFTFile(ymlText);
+    // CFT File Name 
+    createCFTFile(raml_file, ymlText);
 
-// Create source code files based on template.
-createSourceTemplateFiles(funcs, _runtime);
+    // Create source code files based on template.
+    createSourceTemplateFiles(funcs, _runtime);
 
-console.log("Processing Complete !");
+    console.log("Processing Complete !");    
+}
+
 
 //all the functions.
 
@@ -53,11 +58,12 @@ function createSourceTemplateFiles(funcs, _runtime ) {
   for (var i in funcs) {
     var funcRes = funcs[i];
     var codeFile = _codebase + "/" + funcRes.name + "Function."  + _runtimeExt;
-    fs.createReadStream("NodejsFunctionTemplate.js").pipe(fs.createWriteStream("./output/" + codeFile));
+    var funcTemplateFile = path.resolve(__dirname, "NodejsFunctionTemplate.js");
+    fs.createReadStream(funcTemplateFile).pipe(fs.createWriteStream("./output/" + codeFile));
   }
 }
 
-function createCFTFile(ymlText) {
+function createCFTFile(raml_file, ymlText) {
 
     var YAMLtxt = ymlText.replace(/(---)/g, '').replace(/( - )/g, '');
      //YAMLtxt = ymlText;
@@ -77,6 +83,8 @@ function createCFTFile(ymlText) {
 }
 
 function processResource(res) {
+
+    var funcs =[]; //array of parsed function definitions
 
     // Trace resource's relative URI
     var relativeUri = res.relativeUri;
@@ -116,6 +124,8 @@ function processResource(res) {
             processResource(subRes);
         })
     }
+
+    return funcs;
 }
 
 function getFuncName (completeUri, methodName) {
@@ -161,7 +171,8 @@ CFT.Resources = [];
          func.Properties.Runtime = runtime;
          func.Properties.CodeUri = _codebase + "/" + funcRes.name + "Function."  + runtimeExt;
          func.Properties.Events = {};
-         Evt = {};
+         
+         var Evt = {};
          //Evt.name  = funcRes.name + "Resource";
          Evt.Type = "Api";
          Evt.Properties = {};
@@ -177,3 +188,16 @@ CFT.Resources = [];
 
     return CFT;
 }
+
+if (!module.parent) {
+
+    if (!(process.argv[2])) {
+        console.log ("Please provide RAML file to process");
+        process.exit();
+    }
+
+    processRaml(process.argv[2])
+}
+
+
+ 
