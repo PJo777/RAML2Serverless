@@ -40,7 +40,7 @@ Create a S3 bucket with full-permissions for the user (This is for uploading sou
 Use the following command to upload the code to S3 and get an updated CloudFormation template.
 
 ```
-aws cloudformation package --template <cloudformation-template> --s3-bucket <S3 bucket> --output json >  <updated-cloudformation-template>
+aws cloudformation package --template <cloudformation-template> --s3-bucket <S3 bucket> --output json <updated-cloudformation-template>
 
 ```
 
